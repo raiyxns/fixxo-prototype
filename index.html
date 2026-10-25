@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIXXO - Express Mobile Repair & AI Auto-Triage</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                            dark: '#052e16'
+                        },
+                        dark: {
+                            900: '#090d16',
+                            800: '#111827',
+                            700: '#1f2937',
+                            600: '#374151'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(34, 197, 94, 0.8); }
+        }
+        .ai-pulse { animation: pulse-glow 2s infinite; }
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+        .scan-line { animation: scanline 2.5s linear infinite; }
+    </style>
+</head>
+<body class="bg-dark-900 text-gray-100 min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-50 bg-dark-800/90 backdrop-blur-md border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('home')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-brand-500/30 text-white font-extrabold text-xl">
+                    F
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-gray-200 to-brand-400 bg-clip-text text-transparent">FIXXO</span>
+                    <span class="text-xs block text-brand-400 font-semibold tracking-wider uppercase">AI Express Repair</span>
+                </div>
+            </div>
+
+            <!-- Tab Navigation Links -->
+            <nav class="hidden md:flex items-center space-x-1 bg-dark-900/80 p-1.5 rounded-2xl border border-gray-800">
+                <button onclick="switchTab('home')" id="nav-home" class="px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 bg-brand-600 text-white shadow-md shadow-brand-600/20">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Diagnose & Book</span>
+                </button>
+                <button onclick="switchTab('ai_bot')" id="nav-ai_bot" class="px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-gray-800">
+                    <i class="fa-solid fa-robot"></i>
+                    <span>AI Repair Bot</span>
+                </button>
+                <button onclick="switchTab('checkout')" id="nav-checkout" class="px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-gray-800">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Checkout & Parts</span>
+                </button>
+                <button onclick="switchTab('tracker')" id="nav-tracker" class="px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-gray-800">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                    <span>Live Hub Cam</span>
+                </button>
+            </nav>
+
+            <div class="flex items-center space-x-3">
+                <div class="hidden lg:flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full text-xs font-medium text-emerald-400">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Hubs Online: 30 Mins Pickup</span>
+                </div>
+                <button onclick="openMirrorModal()" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all">
+                    <i class="fa-solid fa-camera text-brand-400"></i>
+                    <span>Mirror-Cam Grader</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-dark-800/95 backdrop-blur-md border-t border-gray-800 px-4 py-2 flex justify-around items-center">
+        <button onclick="switchTab('home')" id="mob-nav-home" class="flex flex-col items-center text-brand-400 text-xs font-medium py-1">
+            <i class="fa-solid fa-wand-magic-sparkles text-lg mb-1"></i>
+            <span>Diagnose</span>
+        </button>
+        <button onclick="switchTab('ai_bot')" id="mob-nav-ai_bot" class="flex flex-col items-center text-gray-400 hover:text-white text-xs font-medium py-1">
+            <i class="fa-solid fa-robot text-lg mb-1"></i>
+            <span>AI Bot</span>
+        </button>
+        <button onclick="switchTab('checkout')" id="mob-nav-checkout" class="flex flex-col items-center text-gray-400 hover:text-white text-xs font-medium py-1">
+            <i class="fa-solid fa-bolt text-lg mb-1"></i>
+            <span>Parts</span>
+        </button>
+        <button onclick="switchTab('tracker')" id="mob-nav-tracker" class="flex flex-col items-center text-gray-400 hover:text-white text-xs font-medium py-1">
+            <i class="fa-solid fa-satellite-dish text-lg mb-1"></i>
+            <span>Hub Cam</span>
+        </button>
+    </div>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 mb-16 md:mb-6">
+
+        <!-- TAB 1: HOME / BOOK & DIAGNOSE -->
+        <section id="tab-home" class="space-y-8">
+            <!-- Hero Banner -->
+            <div class="relative overflow-hidden bg-gradient-to-r from-dark-800 via-gray-900 to-dark-800 border border-gray-800 rounded-3xl p-6 md:p-10 shadow-2xl">
+                <div class="absolute -right-10 -bottom-10 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="max-w-2xl relative z-10">
+                    <div class="inline-flex items-center space-x-2 bg-brand-500/10 text-brand-400 text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>AI-Powered Mobile Diagnostics & Express Repair</span>
+                    </div>
+                    <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 text-white">
+                        Instant Diagnostics. <br><span class="bg-gradient-to-r from-brand-400 to-emerald-300 bg-clip-text text-transparent">Zero BS Repair.</span>
+                    </h1>
+                    <p class="text-gray-400 text-sm md:text-base mb-6">
+                        Select your device brand, pinpoint the exact issue, and let Fixxo AI auto-test your hardware, run sonic wave water ejectors, or dispatch a 30-minute doorstep technician.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 1: Select Brand & Model -->
+            <div class="bg-dark-800 border border-gray-800 rounded-3xl p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <span class="w-7 h-7 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs font-bold">1</span>
+                        <span>Select Your Device Brand & Model</span>
+                    </h2>
+                    <span id="selected-device-badge" class="text-xs bg-gray-900 border border-gray-700 text-brand-400 px-3 py-1 rounded-full font-semibold">Apple • iPhone 15 Pro</span>
+                </div>
+
+                <!-- Brand Buttons -->
+                <div id="brand-buttons-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+                    <!-- Populated via JS -->
+                </div>
+
+                <!-- Model Selector Dropdown -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Exact Model</label>
+                    <select id="model-select" onchange="handleModelChange(this.value)" class="w-full bg-dark-900 border border-gray-700 rounded-2xl px-4 py-3 text-sm text-white font-medium focus:outline-none focus:border-brand-500 transition-all">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Step 2: Select Problem Category & Sub-Problem -->
+            <div class="bg-dark-800 border border-gray-800 rounded-3xl p-6 shadow-xl space-y-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <span class="w-7 h-7 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center text-xs font-bold">2</span>
+                        <span>What is malfunctioning?</span>
+                    </h2>
+                </div>
+
+                <!-- Category Cards -->
+                <div id="category-cards-container" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- Populated via JS -->
+                </div>
+
+                <!-- Sub-Problems List -->
+                <div class="border-t border-gray-700/60 pt-6">
+                    <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4">Select Specific Symptom</h3>
+                    <div id="subproblems-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sticky Bottom CTA for Home -->
+            <div class="sticky bottom-4 z-40 bg-dark-800/95 backdrop-blur-md border border-brand-500/30 p-4 rounded-2xl shadow-2xl flex items-center justify-between">
+                <div>
+                    <span class="text-xs text-gray-400 block">Selected Problem:</span>
+                    <span id="cta-summary-text" class="text-sm font-bold text-white">Outer Glass Cracked (Image & Touch Working)</span>
+                </div>
+                <button onclick="goToAiBot()" class="bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-brand-500/30 flex items-center space-x-2 transition-all">
+                    <span>Diagnose with Fixxo AI Bot</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 2: FIXXO AI AUTO-REPAIR BOT -->
+        <section id="tab-ai_bot" class="hidden space-y-6">
+            <!-- Top Bot Bar -->
+            <div class="bg-dark-800 border border-gray-800 rounded-3xl p-4 md:p-6 flex flex-col md:flex-row items-center justify-between shadow-xl gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-2xl text-white ai-pulse font-mono font-bold">
+                            ><
+                        </div>
+                        <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-dark-800 rounded-full"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-lg font-bold text-white">Fixxo AI Triage Bot</h2>
+                            <span class="bg-brand-500/10 text-brand-400 text-xs font-bold px-2 py-0.5 rounded-full border border-brand-500/20">Online</span>
+                        </div>
+                        <p class="text-xs text-gray-400">Hardware & OS Sandbox Connected • Real-time Telemetry Active</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="resetAiChat()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs font-semibold px-3.5 py-2 rounded-xl transition-all flex items-center space-x-2">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Reset Session</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat & Voice Input Bar -->
+            <div class="bg-dark-800 border border-gray-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4">
+                <div id="chat-messages-container" class="max-h-80 overflow-y-auto space-y-4 pr-2">
+                    <!-- Populated via JS -->
+                </div>
+
+                <div class="flex items-center space-x-3 pt-2 border-t border-gray-700/60">
+                    <button onclick="toggleVoiceSpeech()" id="mic-btn" class="w-12 h-12 rounded-2xl bg-gray-900 border border-gray-700 hover:border-brand-500 text-gray-300 hover:text-brand-400 flex items-center justify-center transition-all flex-shrink-0">
+                        <i class="fa-solid fa-microphone text-lg"></i>
+                    </button>
+                    <input type="text" id="chat-input" placeholder="Type your phone problem or click mic (e.g., 'Speaker has water in it')..." onkeydown="if(event.key==='Enter') sendUserChatMessage()" class="flex-1 bg-dark-900 border border-gray-700 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500 transition-all">
+                    <button onclick="sendUserChatMessage()" class="bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-3 rounded-2xl transition-all shadow-md shadow-brand-600/20 flex items-center space-x-2">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        <span class="hidden sm:inline">Send</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Permission Gate Card & Interactive Auto-Repair Panel -->
+            <div id="permission-gate-card" class="bg-dark-800 border border-brand-500/30 rounded-3xl p-6 shadow-2xl space-y-6">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-brand-400 uppercase tracking-wider block mb-1">AI Diagnosis & Recommendation</span>
+                        <h3 id="ai-diagnosis-title" class="text-xl font-bold text-white mb-2">AMOLED panel intact. Eligible for precision OCA Glass Lamination instead of full combo replacement.</h3>
+                        <p id="ai-diagnosis-desc" class="text-sm text-gray-300">Grant Fixxo AI permission to execute automated repair calibration or software remediation right now.</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons: Grant vs Deny -->
+                <div id="permission-buttons-wrapper" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button onclick="grantAutoRepairPermission()" class="bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-brand-500/30 flex items-center justify-center space-x-2 transition-all">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Grant Permission: Run Auto-Repair</span>
+                    </button>
+                    <button onclick="grantManualPermission()" class="bg-gray-900 hover:bg-gray-700 border border-gray-700 text-gray-200 font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center space-x-2 transition-all">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Deny: Show Manual Guide & Deep-Link</span>
+                    </button>
+                </div>
+
+                <!-- Interactive Auto-Repair Execution Panel (Initially Hidden) -->
+                <div id="auto-repair-panel" class="hidden bg-dark-900 border border-gray-700 rounded-2xl p-6 space-y-6">
+                    <!-- Dynamic content based on actionType -->
+                </div>
+
+                <!-- Manual Guide Panel (Initially Hidden) -->
+                <div id="manual-guide-panel" class="hidden bg-dark-900 border border-gray-700 rounded-2xl p-6 space-y-4">
+                    <h4 class="text-sm font-bold text-brand-400 uppercase tracking-wider flex items-center space-x-2">
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>Step-by-Step Manual Repair & Settings Guide</span>
+                    </h4>
+                    <ul id="manual-steps-list" class="space-y-2 text-sm text-gray-300">
+                        <!-- Populated via JS -->
+                    </ul>
+                    <div class="pt-4">
+                        <button onclick="openSettingsModal()" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all">
+                            <i class="fa-solid fa-gear text-brand-400"></i>
+                            <span id="deeplink-btn-text">Open OS System Settings (Deep-Link)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resolution Prompt -->
+            <div class="bg-dark-800 border border-gray-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h4 class="text-base font-bold text-white">Did this resolve your issue?</h4>
+                    <p class="text-xs text-gray-400">If your hardware is physically damaged, book our 30-minute doorstep pickup.</p>
+                </div>
+                <div class="flex items-center space-x-3 w-full md:w-auto">
+                    <button onclick="markAsFixed()" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-3 rounded-xl text-sm transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Fixed My Phone!</span>
+                    </button>
+                    <button onclick="goToCheckout()" class="flex-1 md:flex-none bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-3 rounded-xl text-sm transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-truck-fast"></i>
+                        <span>Still Broken -> Book Pickup</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: SMART CHECKOUT & TRUST ENGINE -->
+        <section id="tab-checkout" class="hidden space-y-6">
+            <div class="bg-dark-800 border border-gray-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+                <div>
+                    <span class="text-xs font-bold text-brand-400 uppercase tracking-wider block mb-1">Step 3 of 4</span>
+                    <h2 class="text-2xl font-extrabold text-white">Select Hardware Repair Tier & Book Pickup</h2>
+                    <p class="text-sm text-gray-400">Authorized OEM parts with warranty backed by Fixxo Hubs.</p>
+                </div>
+
+                <!-- 3-Tier Part Selector -->
+                <div id="hardware-tiers-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Populated via JS -->
+                </div>
+
+                <!-- Add-ons Checkboxes -->
+                <div class="bg-dark-900 border border-gray-700 rounded-2xl p-5 space-y-4">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Optional Protection & Convenience Add-ons</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <label class="flex items-center space-x-3 bg-dark-800 p-3 rounded-xl border border-gray-700 cursor-pointer hover:border-brand-500 transition-all">
+                            <input type="checkbox" id="addon-backup" onchange="updateAddons()" class="w-4 h-4 text-brand-600 rounded bg-dark-900 border-gray-700 focus:ring-brand-500">
+                            <div>
+                                <span class="text-sm font-bold text-white block">Backup Loaner Phone (+₹199)</span>
+                                <span class="text-xs text-gray-400">Stay connected while we repair your device</span>
+                            </div>
+                        </label>
+                        <label class="flex items-center space-x-3 bg-dark-800 p-3 rounded-xl border border-gray-700 cursor-pointer hover:border-brand-500 transition-all">
+                            <input type="checkbox" id="addon-glass" onchange="updateAddons()" class="w-4 h-4 text-brand-600 rounded bg-dark-900 border-gray-700 focus:ring-brand-500">
+                            <div>
+                                <span class="text-sm font-bold text-white block">Tempered Glass Guard (+₹149)</span>
+                                <span class="text-xs text-gray-400">9H hardness edge-to-edge glass protection</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Summary Bill & Dispatch Button -->
+                <div class="bg-gradient-to-r from-dark-900 to-gray-900 border border-brand-500/30 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs text-gray-400 block">Total Estimated Payable:</span>
+                        <div class="flex items-baseline space-x-2">
+                            <span id="summary-total-price" class="text-3xl font-extrabold text-white">₹3,299</span>
+                            <span class="text-xs text-emerald-400 font-semibold">Includes Doorstep Pickup & Drop</span>
+                        </div>
+                    </div>
+                    <button onclick="confirmOrder()" class="w-full md:w-auto bg-gradient-to-r from-brand-600 to-emerald-500 hover:from-brand-500 hover:to-emerald-400 text-white font-extrabold px-8 py-4 rounded-2xl shadow-xl shadow-brand-500/30 transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-shield-check"></i>
+                        <span>Confirm Doorstep Pickup & Repair</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: LIVE HUB WORKBENCH CAM / TRACKER -->
+        <section id="tab-tracker" class="hidden space-y-6">
+            <div class="bg-dark-800 border border-gray-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-bold text-brand-400 uppercase tracking-wider block mb-1">Live Order Tracker #FX-8942</span>
+                        <h2 class="text-2xl font-extrabold text-white">Live Hub Workbench Cam & Status</h2>
+                    </div>
+                    <div class="flex items-center space-x-2 bg-brand-500/10 border border-brand-500/20 px-3.5 py-1.5 rounded-full text-xs font-medium text-brand-400">
+                        <span class="w-2.5 h-2.5 rounded-full bg-brand-500 animate-ping"></span>
+                        <span id="tracker-status-text">Stage 1: Rider Assigned & 12-Point OTP Check</span>
+                    </div>
+                </div>
+
+                <!-- Progress Steps Bar -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div id="step-card-1" class="bg-brand-900/40 border border-brand-500 rounded-2xl p-4 text-center transition-all">
+                        <div class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center mx-auto mb-2 font-bold text-sm">1</div>
+                        <span class="text-xs font-bold text-white block">Rider Pickup</span>
+                    </div>
+                    <div id="step-card-2" class="bg-dark-900 border border-gray-700 rounded-2xl p-4 text-center transition-all">
+                        <div class="w-8 h-8 rounded-full bg-gray-800 text-gray-400 flex items-center justify-center mx-auto mb-2 font-bold text-sm">2</div>
+                        <span class="text-xs font-medium text-gray-400 block">QR Tamper Seal</span>
+                    </div>
+                    <div id="step-card-3" class="bg-dark-900 border border-gray-700 rounded-2xl p-4 text-center transition-all">
+                        <div class="w-8 h-8 rounded-full bg-gray-800 text-gray-400 flex items-center justify-center mx-auto mb-2 font-bold text-sm">3</div>
+                        <span class="text-xs font-medium text-gray-400 block">Hub Workbench Cam</span>
+                    </div>
+                    <div id="step-card-4" class="bg-dark-900 border border-gray-700 rounded-2xl p-4 text-center transition-all">
+                        <div class="w-8 h-8 rounded-full bg-gray-800 text-gray-400 flex items-center justify-center mx-auto mb-2 font-bold text-sm">4</div>
+                        <span class="text-xs font-medium text-gray-400 block">Delivered & Passport</span>
+                    </div>
+                </div>
+
+                <!-- Simulated Live Stream & Mid-Repair Approval Gate -->
+                <div class="relative bg-black rounded-3xl overflow-hidden border border-gray-700 h-80 flex items-center justify-center">
+                    <div class="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent z-10"></div>
+                    <div class="absolute inset-0 bg-[radial-gradient(#15803d_1px,transparent_1px)] [background-size:16px_16px] opacity-20"></div>
+                    
+                    <!-- Camera simulation content -->
+                    <div id="cam-stream-content" class="text-center z-20 space-y-3 px-4">
+                        <div class="inline-flex items-center space-x-2 bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+                            <i class="fa-solid fa-video"></i>
+                            <span>LIVE WORKBENCH CAM - HUB #4 MUMBAI</span>
+                        </div>
+                        <h3 class="text-lg font-bold text-white">Technician Rahul is inspecting your device</h3>
+                        <p class="text-xs text-gray-400 max-w-md mx-auto">High-precision microscope feed active. Water seal intact. No secondary motherboard corrosion found.</p>
+                    </div>
+
+                    <!-- Mid-Repair Approval Gate Overlay (Shown at Stage 3) -->
+                    <div id="mid-repair-gate" class="hidden absolute inset-0 bg-dark-900/90 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center space-y-4">
+                        <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h4 class="text-lg font-bold text-white">Technician Discovery Gate</h4>
+                        <p class="text-xs text-gray-300 max-w-md">Rubber water-resistance gasket shows minor aging. Replace secondary gasket for zero charge?</p>
+                        <div class="flex space-x-3">
+                            <button onclick="resolveMidRepair('approved')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs transition-all">
+                                Approve Free Gasket Upgrade
+                            </button>
+                            <button onclick="resolveMidRepair('declined')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold px-5 py-2.5 rounded-xl text-xs transition-all">
+                                Skip / Proceed Standard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tracker Controls Simulator -->
+                <div class="flex items-center justify-between pt-2">
+                    <button onclick="advanceTrackerStage()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold px-4 py-2.5 rounded-xl border border-gray-700 transition-all flex items-center space-x-2">
+                        <i class="fa-solid fa-forward"></i>
+                        <span id="next-stage-btn-text">Advance to Stage 2: QR Tamper Seal</span>
+                    </button>
+                    <span id="tracker-timer" class="text-xs text-brand-400 font-mono font-bold">Estimated Delivery: Today, 7:30 PM</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: MIRROR-CAM SCREEN GRADER -->
+    <div id="mirror-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-dark-800 border border-gray-700 rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl relative">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                    <i class="fa-solid fa-camera text-brand-400"></i>
+                    <span>Mirror-Cam Screen & Frame Grader</span>
+                </h3>
+                <button onclick="closeMirrorModal()" class="w-8 h-8 rounded-full bg-gray-900 text-gray-400 hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="relative bg-black rounded-2xl overflow-hidden h-64 flex items-center justify-center border border-gray-700">
+                <video id="webcam-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover"></video>
+                <canvas id="mirror-canvas" class="absolute inset-0 w-full h-full hidden"></canvas>
+                <div class="absolute inset-0 border-2 border-brand-500/50 rounded-2xl pointer-events-none"></div>
+                <div class="absolute inset-x-0 h-1 bg-brand-500 scan-line pointer-events-none"></div>
+                <div id="mirror-status-overlay" class="absolute bottom-3 bg-dark-900/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-mono text-brand-400 border border-brand-500/30">
+                    Scanning surface reflection...
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="flex justify-between text-xs font-semibold">
+                    <span class="text-gray-400">Glass Scratch Score:</span>
+                    <span id="score-scratch" class="text-emerald-400">Grade A (98% Pristine)</span>
+                </div>
+                <div class="flex justify-between text-xs font-semibold">
+                    <span class="text-gray-400">Frame Bend Index:</span>
+                    <span id="score-bend" class="text-emerald-400">0.02mm (Zero Bend)</span>
+                </div>
+            </div>
+
+            <button onclick="completeMirrorScan()" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-brand-600/30">
+                Lock AI Grade & Apply to Quote
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: OS SYSTEM SETTINGS DEEP-LINK DRAWER -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-dark-800 border border-gray-700 rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl relative">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                    <i class="fa-solid fa-gear text-brand-400"></i>
+                    <span>Simulated OS System Settings</span>
+                </h3>
+                <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full bg-gray-900 text-gray-400 hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="bg-dark-900 border border-gray-700 rounded-2xl p-4 space-y-4">
+                <div class="flex items-center justify-between py-2 border-b border-gray-800">
+                    <div>
+                        <span class="text-sm font-bold text-white block">Mono Audio Balance</span>
+                        <span class="text-xs text-gray-400">Combine channels for single speaker</span>
+                    </div>
+                    <input type="checkbox" onchange="showToast('Mono Audio toggled via Deep-Link')" class="w-5 h-5 text-brand-600 rounded bg-dark-800 border-gray-700">
+                </div>
+                <div class="flex items-center justify-between py-2 border-b border-gray-800">
+                    <div>
+                        <span class="text-sm font-bold text-white block">Increase Touch Sensitivity</span>
+                        <span class="text-xs text-gray-400">Improve touch response for screen protectors</span>
+                    </div>
+                    <input type="checkbox" checked onchange="showToast('Touch sensitivity increased')" class="w-5 h-5 text-brand-600 rounded bg-dark-800 border-gray-700">
+                </div>
+                <div class="flex items-center justify-between py-2">
+                    <div>
+                        <span class="text-sm font-bold text-white block">Screen Refresh Rate (60Hz / 120Hz)</span>
+                        <span class="text-xs text-gray-400">Reduce flex voltage heat</span>
+                    </div>
+                    <span class="text-xs font-bold bg-brand-500/20 text-brand-400 px-2 py-1 rounded">60Hz Active</span>
+                </div>
+            </div>
+
+            <button onclick="closeSettingsModal()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition-all">
+                Close & Return to Fixxo AI
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="toast-banner" class="fixed bottom-20 md:bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-dark-800 border border-brand-500 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center space-x-3">
+        <i class="fa-solid fa-circle-check text-brand-400 text-lg"></i>
+        <span id="toast-text" class="text-sm font-semibold">Action completed successfully!</span>
+    </div>
+
+    <!-- JAVASCRIPT: COMPLETE APP LOGIC & DATA DICTIONARY -->
+    <script>
+        // 1. DATA DICTIONARY
+        const BRANDS_DATA = {
+            "Apple": ["iPhone 16 Pro Max", "iPhone 15 Pro", "iPhone 15", "iPhone 14", "iPhone 13"],
+            "Samsung": ["Galaxy S24 Ultra", "Galaxy S23 FE", "Galaxy A55 5G", "Galaxy Z Flip 5", "Galaxy M34"],
+            "OnePlus": ["OnePlus 12", "OnePlus 12R", "OnePlus 11", "OnePlus Nord CE 4"],
+            "Xiaomi": ["Xiaomi 14", "Redmi Note 13 Pro+", "Poco X6 Pro", "Redmi 12 5G"],
+            "Vivo": ["Vivo X100 Pro", "Vivo V30 Pro", "iQOO Neo 9 Pro"],
+            "Realme": ["Realme GT 6", "Realme 12 Pro+", "Realme Narzo 70 Pro"]
+        };
+
+        const PROBLEMS_DB = {
+            "display": {
+                name: "Display & Touch",
+                icon: "fa-mobile-screen",
+                subProblems: {
+                    "cracked_glass": {
+                        title: "Outer Glass Cracked (Image & Touch Working)",
+                        aiDiagnosis: "AMOLED panel intact. Eligible for precision OCA Glass Lamination instead of full combo replacement.",
+                        actionType: "touch_test",
+                        actionName: "Launch Interactive 36-Zone Touch Grid Calibration Test",
+                        manualGuide: [
+                            "1. Enable Touch Accommodations in Accessibility Settings.",
+                            "2. Turn on 'Increase Touch Sensitivity' (Glove Mode) in Display Settings.",
+                            "3. Apply clear tape over cracked glass to prevent micro-shards entering the digitizer."
+                        ],
+                        deepLink: "android.settings.DISPLAY_SETTINGS",
+                        hardwareTiers: [
+                            { name: "OCA Glass Only Lamination", price: 1499, warranty: "90 Days", tag: "Saves 60%" },
+                            { name: "OEM Grade Display Combo", price: 3299, warranty: "6 Months", tag: "Popular" },
+                            { name: "100% Service Center Original", price: 5499, warranty: "6 Months + Accidental", tag: "Best Quality" }
+                        ]
+                    },
+                    "green_line": {
+                        title: "Green / Pink / White Vertical Line on Screen",
+                        aiDiagnosis: "Display flex bonding signal drop detected. Can be repaired at hub using Laser Flex Bonding machine.",
+                        actionType: "pixel_strobe",
+                        actionName: "Run Dead-Pixel & Color Cycling Strobe Restorer",
+                        manualGuide: [
+                            "1. Switch Screen Refresh Rate from 120Hz to 60Hz to reduce flex voltage heat.",
+                            "2. Disable 'Always-On Display' immediately.",
+                            "3. Perform Force Reboot (Vol Down + Power for 10 seconds)."
+                        ],
+                        deepLink: "android.settings.DISPLAY_SETTINGS",
+                        hardwareTiers: [
+                            { name: "Laser Flex Re-Bonding (No Screen Change)", price: 2199, warranty: "90 Days", tag: "Hub Special" },
+                            { name: "OEM Refurbished AMOLED", price: 3899, warranty: "6 Months", tag: "Popular" },
+                            { name: "100% Original Service Pack", price: 6499, warranty: "6 Months", tag: "Original" }
+                        ]
+                    },
+                    "black_ink": {
+                        title: "Black Ink Spots / Purple Bleeding / Blank Screen",
+                        aiDiagnosis: "Internal OLED encapsulation ruptured. Software cannot repair physical ink bleed; full combo swap required.",
+                        actionType: "touch_test",
+                        actionName: "Run Vibration & Haptic Alive Check",
+                        manualGuide: [
+                            "1. Connect phone to charger and check if charging chime sounds.",
+                            "2. Hold Volume Up + Volume Down + Power to test forced display wake.",
+                            "3. Toggle Dark Mode off via voice assistant to read visible portion of screen."
+                        ],
+                        deepLink: "android.settings.ACCESSIBILITY_SETTINGS",
+                        hardwareTiers: [
+                            { name: "Standard Incell Compatible", price: 1899, warranty: "90 Days", tag: "Budget" },
+                            { name: "OEM Original Refurbished", price: 3499, warranty: "6 Months", tag: "Recommended" },
+                            { name: "100% Authorized Original", price: 5999, warranty: "6 Months + Shield", tag: "Premium" }
+                        ]
+                    }
+                }
+            },
+            "audio": {
+                name: "Speaker, Mic & Earpiece",
+                icon: "fa-volume-high",
+                subProblems: {
+                    "speaker_muffled": {
+                        title: "Speaker Volume Very Low / Muffled / Water Inside",
+                        aiDiagnosis: "Acoustic mesh blockage or trapped moisture detected in bottom speaker chamber.",
+                        actionType: "sonic_wave",
+                        actionName: "Run 165Hz Pulsed Sonic Water & Dust Ejector Wave (Real Audio)",
+                        manualGuide: [
+                            "1. Open Sound Settings and ensure 'Mono Audio' balance slider is centered.",
+                            "2. Turn off 'Volume Limiter / Media Volume Limit'.",
+                            "3. Place phone speaker-down on a dry microfiber cloth during sonic wave."
+                        ],
+                        deepLink: "android.settings.SOUND_SETTINGS",
+                        hardwareTiers: [
+                            { name: "Ultrasonic Mesh Chemical Cleaning at Hub", price: 499, warranty: "30 Days", tag: "Quick Fix" },
+                            { name: "OEM Loud Speaker Module Replacement", price: 1199, warranty: "6 Months", tag: "Recommended" },
+                            { name: "Original Dual-Speaker + Seal Replacement", price: 1899, warranty: "6 Months", tag: "Original" }
+                        ]
+                    },
+                    "mic_dead": {
+                        title: "Mic Not Working (Others Can't Hear Me on Calls)",
+                        aiDiagnosis: "Primary MEMS microphone on bottom charging sub-board is muted, blocked, or shorted.",
+                        actionType: "mic_test",
+                        actionName: "Run Live Decibel Loopback Microphone Test",
+                        manualGuide: [
+                            "1. Check Privacy Dashboard -> Enable 'Microphone Access' global toggle.",
+                            "2. Disable 'Wi-Fi Calling' and 'Clear Calling / Noise Suppression' temporarily.",
+                            "3. Revoke microphone permissions from recently installed third-party recording apps."
+                        ],
+                        deepLink: "android.settings.PRIVACY_SETTINGS",
+                        hardwareTiers: [
+                            { name: "Mic Port Micro-Vacuum & Soldering", price: 699, warranty: "90 Days", tag: "Saver" },
+                            { name: "Complete Charging + Mic Sub-Board Swap", price: 1399, warranty: "6 Months", tag: "Recommended" },
+                            { name: "Original OEM Sub-Board + Water Seal", price: 2199, warranty: "6 Months", tag: "Original" }
+                        ]
+                    }
+                }
+            },
+            "battery": {
+                name: "Battery & Charging Port",
+                icon: "fa-battery-half",
+                subProblems: {
+                    "loose_port": {
+                        title: "Charging Cable Loose / Only Charges at an Angle",
+                        aiDiagnosis: "Compacted pocket lint or worn-out Type-C / Lightning retention pins preventing full PD wattage handshake.",
+                        actionType: "battery_scan",
+                        actionName: "Run Live Charging Voltage & Pin Handshake Scanner",
+                        manualGuide: [
+                            "1. Enable 'Fast Charging / Super Fast Charging' toggle in Battery Settings.",
+                            "2. Change USB Default Configuration in Developer Options to 'Charging Only'.",
+                            "3. Inspect port under flash for compacted lint (never insert metal pins)."
+                        ],
+                        deepLink: "android.settings.BATTERY_SAVER_SETTINGS",
+                        hardwareTiers: [
+                            { name: "Precision Microscope Port Cleaning & Pin Reflow", price: 599, warranty: "60 Days", tag: "Fastest" },
+                            { name: "OEM Charging Flex & Port Replacement", price: 1299, warranty: "6 Months", tag: "Recommended" },
+                            { name: "Original IC-Protected Charging Board", price: 1999, warranty: "6 Months", tag: "Original" }
+                        ]
+                    },
+                    "fast_drain": {
+                        title: "Battery Drains in 2-3 Hours / Overheating / Sudden Shutdown",
+                        aiDiagnosis: "Lithium-ion cell cycle degradation (>500 cycles) and high internal impedance causing voltage drops.",
+                        actionType: "battery_scan",
+                        actionName: "Auto-Kill Rogue Wake-Lock Apps & Recalibrate Fuel Gauge",
+                        manualGuide: [
+                            "1. Open Battery Usage -> Restrict background usage for top 3 draining apps.",
+                            "2. Turn off '5G Auto-Switch' and 'Wi-Fi/Bluetooth Background Scanning'.",
+                            "3. Perform Battery Fuel-Gauge Calibration (drain to 0% and charge to 100% uninterrupted)."
+                        ],
+                        deepLink: "android.settings.BATTERY_SAVER_SETTINGS",
+                        hardwareTiers: [
+                            { name: "High-Capacity Certified Cell", price: 1399, warranty: "6 Months", tag: "Value" },
+                            { name: "OEM Zero-Cycle Battery (100% Health)", price: 1999, warranty: "6 Months", tag: "Most Popular" },
+                            { name: "100% Authorized Service Battery + BMS programming", price: 2999, warranty: "1 Year", tag: "Original" }
+                        ]
+                    }
+                }
+            },
+            "software": {
+                name: "Software, Hang & System",
+                icon: "fa-microchip",
+                subProblems: {
+                    "lag_malware": {
+                        title: "Extreme Lag / Pop-Up Ads / Storage Full",
+                        aiDiagnosis: "Adware background package and corrupted system temp cache consuming RAM.",
+                        actionType: "software_clean",
+                        actionName: "Execute 1-Tap Adware Package Purge & RAM Cache Flush",
+                        manualGuide: [
+                            "1. Boot into Safe Mode (Hold Power -> Long-press 'Power Off') to isolate rogue adware.",
+                            "2. Go to Apps -> Sort by 'Last Used' -> Uninstall unnamed/blank-icon APK packages.",
+                            "3. Set Private DNS to 'dns.adguard.com' to block system-wide pop-ups."
+                        ],
+                        deepLink: "android.settings.APPLICATION_SETTINGS",
+                        hardwareTiers: [
+                            { name: "Remote Technician Deep Software Clean", price: 399, warranty: "30 Days", tag: "Remote" },
+                            { name: "Hub Clean OS Re-Flash + Data Backup", price: 899, warranty: "90 Days", tag: "Recommended" },
+                            { name: "UFS Storage Chip Health Repair + OS Flash", price: 1699, warranty: "6 Months", tag: "Complete" }
+                        ]
+                    }
+                }
+            }
+        };
+
+        // 2. GLOBAL STATE
+        let appState = {
+            currentTab: 'home',
+            selectedBrand: 'Apple',
+            selectedModel: 'iPhone 15 Pro',
+            selectedCategory: 'display',
+            selectedSubProblem: 'cracked_glass',
+            aiPermissionMode: null,
+            autoFixCompleted: false,
+            sonicWavePlaying: false,
+            selectedTierIndex: 1,
+            addons: { backupPhone: false, temperedGlass: false, mirrorGraded: false },
+            orderActive: false,
+            trackerStage: 1,
+            midRepairDecision: 'pending',
+            chatMessages: [
+                { sender: 'ai', text: 'Hello! I am Fixxo AI Triage. I see you selected Outer Glass Cracked on iPhone 15 Pro. Let me run a diagnostic scan or guide you through automated repair.' }
+            ]
+        };
+
+        // Audio Context for Sonic Wave
+        let audioCtx = null;
+        let oscillator = null;
+        let gainNode = null;
+        let sonicInterval = null;
+
+        // Initialization on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            renderBrands();
+            renderModels();
+            renderCategories();
+            renderSubProblems();
+            renderChatMessages();
+            updateCheckoutSummary();
+        });
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            appState.currentTab = tabId;
+            const tabs = ['home', 'ai_bot', 'checkout', 'tracker'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const navBtn = document.getElementById(`nav-${t}`);
+                const mobNavBtn = document.getElementById(`mob-nav-${t}`);
+                if (t === tabId) {
+                    if (el) el.classList.remove('hidden');
+                    if (navBtn) {
+                        navBtn.className = "px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 bg-brand-600 text-white shadow-md shadow-brand-600/20";
+                    }
+                    if (mobNavBtn) {
+                        mobNavBtn.className = "flex flex-col items-center text-brand-400 text-xs font-medium py-1";
+                    }
+                } else {
+                    if (el) el.classList.add('hidden');
+                    if (navBtn) {
+                        navBtn.className = "px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center space-x-2 text-gray-400 hover:text-white hover:bg-gray-800";
+                    }
+                    if (mobNavBtn) {
+                        mobNavBtn.className = "flex flex-col items-center text-gray-400 hover:text-white text-xs font-medium py-1";
+                    }
+                }
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Render Brands
+        function renderBrands() {
+            const container = document.getElementById('brand-buttons-container');
+            container.innerHTML = '';
+            Object.keys(BRANDS_DATA).forEach(brand => {
+                const isSelected = appState.selectedBrand === brand;
+                const btn = document.createElement('button');
+                btn.className = `p-3 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center justify-center space-y-1 ${isSelected ? 'bg-brand-600/20 border-brand-500 text-brand-400 shadow-md shadow-brand-500/20' : 'bg-dark-900 border-gray-700 text-gray-300 hover:border-gray-500'}`;
+                btn.innerHTML = `<i class="fa-solid fa-mobile text-base"></i><span>${brand}</span>`;
+                btn.onclick = () => {
+                    appState.selectedBrand = brand;
+                    renderModels();
+                    renderBrands();
+                    updateDeviceBadge();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        // Render Models
+        function renderModels() {
+            const select = document.getElementById('model-select');
+            select.innerHTML = '';
+            const models = BRANDS_DATA[appState.selectedBrand] || [];
+            models.forEach(model => {
+                const opt = document.createElement('option');
+                opt.value = model;
+                opt.textContent = model;
+                if (model === appState.selectedModel) opt.selected = true;
+                select.appendChild(opt);
+            });
+            updateDeviceBadge();
+        }
+
+        function handleModelChange(val) {
+            appState.selectedModel = val;
+            updateDeviceBadge();
+        }
+
+        function updateDeviceBadge() {
+            document.getElementById('selected-device-badge').textContent = `${appState.selectedBrand} • ${appState.selectedModel}`;
+        }
+
+        // Render Categories
+        function renderCategories() {
+            const container = document.getElementById('category-cards-container');
+            container.innerHTML = '';
+            Object.keys(PROBLEMS_DB).forEach(catKey => {
+                const cat = PROBLEMS_DB[catKey];
+                const isSelected = appState.selectedCategory === catKey;
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-2xl border cursor-pointer transition-all flex flex-col items-center text-center space-y-2 ${isSelected ? 'bg-brand-600/20 border-brand-500 text-brand-400 shadow-md' : 'bg-dark-900 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white'}`;
+                div.innerHTML = `<i class="fa-solid ${cat.icon} text-xl"></i><span class="text-xs font-bold">${cat.name}</span>`;
+                div.onclick = () => {
+                    appState.selectedCategory = catKey;
+                    const firstSub = Object.keys(cat.subProblems)[0];
+                    appState.selectedSubProblem = firstSub;
+                    renderCategories();
+                    renderSubProblems();
+                    updateCtaSummary();
+                };
+                container.appendChild(div);
+            });
+        }
+
+        // Render Sub-Problems
+        function renderSubProblems() {
+            const container = document.getElementById('subproblems-container');
+            container.innerHTML = '';
+            const cat = PROBLEMS_DB[appState.selectedCategory];
+            if (!cat) return;
+            Object.keys(cat.subProblems).forEach(subKey => {
+                const sub = cat.subProblems[subKey];
+                const isSelected = appState.selectedSubProblem === subKey;
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between space-y-3 ${isSelected ? 'bg-brand-600/20 border-brand-500 shadow-lg' : 'bg-dark-900 border-gray-700 hover:border-gray-500'}`;
+                div.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <span class="text-sm font-bold text-white">${sub.title}</span>
+                        <div class="w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'bg-brand-500 border-brand-400 text-white' : 'border-gray-600 text-transparent'}">
+                            <i class="fa-solid fa-check text-xs"></i>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-400 line-clamp-2">${sub.aiDiagnosis}</span>
+                `;
+                div.onclick = () => {
+                    appState.selectedSubProblem = subKey;
+                    renderSubProblems();
+                    updateCtaSummary();
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function updateCtaSummary() {
+            const cat = PROBLEMS_DB[appState.selectedCategory];
+            if (cat && cat.subProblems[appState.selectedSubProblem]) {
+                document.getElementById('cta-summary-text').textContent = cat.subProblems[appState.selectedSubProblem].title;
+            }
+        }
+
+        function goToAiBot() {
+            switchTab('ai_bot');
+            const sub = PROBLEMS_DB[appState.selectedCategory].subProblems[appState.selectedSubProblem];
+            appState.chatMessages.push({
+                sender: 'ai',
+                text: `Analyzing ${appState.selectedModel} for "${sub.title}". AI Diagnosis: ${sub.aiDiagnosis}`
+            });
+            renderChatMessages();
+            updatePermissionCard();
+        }
+
+        // Chat & AI Bot Logic
+        function renderChatMessages() {
+            const container = document.getElementById('chat-messages-container');
+            container.innerHTML = '';
+            appState.chatMessages.forEach(msg => {
+                const isAi = msg.sender === 'ai';
+                const div = document.createElement('div');
+                div.className = `flex items-start space-x-3 ${isAi ? '' : 'flex-row-reverse space-x-reverse'}`;
+                div.innerHTML = `
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${isAi ? 'bg-gradient-to-tr from-brand-600 to-emerald-400' : 'bg-gray-700'}">
+                        ${isAi ? 'AI' : 'U'}
+                    </div>
+                    <div class="max-w-md bg-dark-900 border ${isAi ? 'border-brand-500/30' : 'border-gray-700'} p-3.5 rounded-2xl text-sm text-gray-200">
+                        ${msg.text}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendUserChatMessage() {
+            const input = document.getElementById('chat-input');
+            const val = input.value.trim();
+            if (!val) return;
+            appState.chatMessages.push({ sender: 'user', text: val });
+            input.value = '';
+            renderChatMessages();
+
+            // Simulate AI response based on keyword
+            setTimeout(() => {
+                let reply = "I have cross-referenced your query with our service records. You can grant permission below to run automated hardware calibration.";
+                const lower = val.toLowerCase();
+                if (lower.includes('water') || lower.includes('speaker') || lower.includes('sound')) {
+                    appState.selectedCategory = 'audio';
+                    appState.selectedSubProblem = 'speaker_muffled';
+                    reply = "Detected acoustic blockage or moisture. Ready to run 165Hz Pulsed Sonic Water Ejector.";
+                } else if (lower.includes('line') || lower.includes('screen') || lower.includes('display')) {
+                    appState.selectedCategory = 'display';
+                    appState.selectedSubProblem = 'green_line';
+                    reply = "Detected display flex signal drop. Ready to run color cycling strobe restorer.";
+                } else if (lower.includes('charge') || lower.includes('battery')) {
+                    appState.selectedCategory = 'battery';
+                    appState.selectedSubProblem = 'loose_port';
+                    reply = "Detected charging handshake issue. Ready to run voltage & pin scanner.";
+                }
+                appState.chatMessages.push({ sender: 'ai', text: reply });
+                renderChatMessages();
+                updatePermissionCard();
+            }, 800);
+        }
+
+        // Voice Recognition using SpeechRecognition API
+        function toggleVoiceSpeech() {
+            const micBtn = document.getElementById('mic-btn');
+            micBtn.classList.add('bg-brand-600', 'text-white', 'animate-pulse');
+            showToast("Listening for voice problem...");
+
+            try {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognition) {
+                    const recognition = new SpeechRecognition();
+                    recognition.lang = 'en-US';
+                    recognition.onresult = (event) => {
+                        const speechText = event.results[0][0].transcript;
+                        document.getElementById('chat-input').value = speechText;
+                        micBtn.classList.remove('bg-brand-600', 'text-white', 'animate-pulse');
+                        sendUserChatMessage();
+                    };
+                    recognition.onerror = () => {
+                        fallbackVoiceSimulation();
+                    };
+                    recognition.start();
+                } else {
+                    fallbackVoiceSimulation();
+                }
+            } catch (e) {
+                fallbackVoiceSimulation();
+            }
+        }
+
+        function fallbackVoiceSimulation() {
+            setTimeout(() => {
+                document.getElementById('chat-input').value = "My phone speaker has water in it";
+                document.getElementById('mic-btn').classList.remove('bg-brand-600', 'text-white', 'animate-pulse');
+                sendUserChatMessage();
+                showToast("Voice parsed successfully via fallback simulator");
+            }, 1500);
+        }
+
+        function resetAiChat() {
+            appState.chatMessages = [
+                { sender: 'ai', text: 'Session reset. How can Fixxo AI help you today?' }
+            ];
+            renderChatMessages();
+            showToast("AI Chat session reset");
+        }
+
+        function updatePermissionCard() {
+            const sub = PROBLEMS_DB[appState.selectedCategory].subProblems[appState.selectedSubProblem];
+            document.getElementById('ai-diagnosis-title').textContent = sub.aiDiagnosis;
+            document.getElementById('ai-diagnosis-desc').textContent = `Recommended action: ${sub.actionName}. Grant permission to execute.`;
+        }
+
+        // Permission & Auto-Repair Actions
+        function grantAutoRepairPermission() {
+            appState.aiPermissionMode = 'auto';
+            document.getElementById('permission-buttons-wrapper').classList.add('hidden');
+            const panel = document.getElementById('auto-repair-panel');
+            panel.classList.remove('hidden');
+
+            const sub = PROBLEMS_DB[appState.selectedCategory].subProblems[appState.selectedSubProblem];
+            
+            if (sub.actionType === 'sonic_wave') {
+                panel.innerHTML = `
+                    <div class="text-center space-y-4">
+                        <div class="w-16 h-16 rounded-3xl bg-brand-500/20 text-brand-400 flex items-center justify-center mx-auto text-2xl animate-bounce">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </div>
+                        <h4 class="text-lg font-bold text-white">Playing 165Hz Pulsed Sonic Water Ejector</h4>
+                        <p class="text-xs text-gray-300">Placing phone face down on hard surface recommended. High-amplitude frequency oscillation active.</p>
+                        <div class="w-full bg-dark-800 h-3 rounded-full overflow-hidden border border-gray-700">
+                            <div id="sonic-progress" class="bg-brand-500 h-full w-0 transition-all duration-300"></div>
+                        </div>
+                        <button onclick="stopSonicWave()" class="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2 rounded-xl">
+                            Stop Sonic Wave Test
+                        </button>
+                    </div>
+                `;
+                startRealSonicWave();
+            } else if (sub.actionType === 'touch_test') {
+                panel.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-sm font-bold text-white">36-Zone Touch Screen Calibration Matrix</h4>
+                            <span id="touch-score" class="text-xs font-mono font-bold text-brand-400">Verified: 0 / 36 (0%)</span>
+                        </div>
+                        <p class="text-xs text-gray-400">Drag your mouse or finger across the grid cells below to verify digitizer responsiveness.</p>
+                        <div id="touch-grid" class="grid grid-cols-6 gap-2"></div>
+                        <button onclick="completeTouchTest()" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-xl text-xs">
+                            Complete Touch Grid Test
+                        </button>
+                    </div>
+                `;
+                buildTouchGrid();
+            } else {
+                // Terminal log progress simulation
+                panel.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-brand-500 animate-ping"></span>
+                            <h4 class="text-sm font-bold text-white">Executing Automated Hardware & OS Diagnostics...</h4>
+                        </div>
+                        <div id="terminal-logs" class="bg-black p-4 rounded-xl font-mono text-xs text-brand-400 space-y-1 h-32 overflow-y-auto border border-gray-800">
+                            <div>[INFO] Initializing hardware bus handshake...</div>
+                        </div>
+                        <div class="w-full bg-dark-800 h-2.5 rounded-full overflow-hidden border border-gray-700">
+                            <div id="term-progress" class="bg-brand-500 h-full w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+                `;
+                runTerminalLogs();
+            }
+        }
+
+        // Real Audio Context 165Hz Oscillator
+        function startRealSonicWave() {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                oscillator = audioCtx.createOscillator();
+                gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(165, audioCtx.currentTime); // 165Hz
+
+                gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start();
+
+                appState.sonicWavePlaying = true;
+                let progress = 0;
+                sonicInterval = setInterval(() => {
+                    progress += 5;
+                    const bar = document.getElementById('sonic-progress');
+                    if (bar) bar.style.width = `${progress}%`;
+                    if (progress >= 100) {
+                        stopSonicWave();
+                        showToast("Sonic wave water ejection completed successfully!");
+                    }
+                }, 250);
+            } catch (e) {
+                showToast("AudioContext simulated successfully");
+            }
+        }
+
+        function stopSonicWave() {
+            if (oscillator) {
+                try { oscillator.stop(); } catch (e) {}
+                oscillator = null;
+            }
+            if (sonicInterval) clearInterval(sonicInterval);
+            appState.sonicWavePlaying = false;
+            showToast("Sonic wave stopped");
+        }
+
+        // Touch Grid Diagnostic Tester
+        function buildTouchGrid() {
+            const grid = document.getElementById('touch-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            let touchedCount = 0;
+
+            for (let i = 0; i < 36; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'h-10 bg-dark-800 border border-gray-700 rounded-lg cursor-pointer transition-all flex items-center justify-center text-xs text-gray-600 font-mono';
+                cell.textContent = i + 1;
+                cell.onmouseover = cell.ontouchstart = () => {
+                    if (!cell.classList.contains('bg-brand-500')) {
+                        cell.classList.remove('bg-dark-800', 'text-gray-600');
+                        cell.classList.add('bg-brand-500', 'text-white', 'shadow-md', 'shadow-brand-500/50');
+                        touchedCount++;
+                        document.getElementById('touch-score').textContent = `Verified: ${touchedCount} / 36 (${Math.round(touchedCount/36*100)}%)`;
+                    }
+                };
+                grid.appendChild(cell);
+            }
+        }
+
+        function completeTouchTest() {
+            showToast("Touch screen grid calibration verified 100% working!");
+            appState.autoFixCompleted = true;
+        }
+
+        function runTerminalLogs() {
+            const logs = [
+                "[INFO] Reading battery impedance & fuel gauge...",
+                "[INFO] Flushing background cache & waking suspended threads...",
+                "[INFO] Verifying MEMS microphone decibel loopback response...",
+                "[SUCCESS] Hardware calibration sequence verified successfully!"
+            ];
+            let idx = 0;
+            const container = document.getElementById('terminal-logs');
+            const prog = document.getElementById('term-progress');
+
+            const timer = setInterval(() => {
+                if (idx < logs.length) {
+                    if (container) container.innerHTML += `<div>${logs[idx]}</div>`;
+                    if (prog) prog.style.width = `${(idx + 1) * 25}%`;
+                    idx++;
+                } else {
+                    clearInterval(timer);
+                    showToast("Automated repair execution completed!");
+                    appState.autoFixCompleted = true;
+                }
+            }, 800);
+        }
+
+        function grantManualPermission() {
+            appState.aiPermissionMode = 'manual';
+            document.getElementById('permission-buttons-wrapper').classList.add('hidden');
+            const manualPanel = document.getElementById('manual-guide-panel');
+            manualPanel.classList.remove('hidden');
+
+            const sub = PROBLEMS_DB[appState.selectedCategory].subProblems[appState.selectedSubProblem];
+            const list = document.getElementById('manual-steps-list');
+            list.innerHTML = '';
+            sub.manualGuide.forEach(step => {
+                const li = document.createElement('li');
+                li.textContent = step;
+                list.appendChild(li);
+            });
+            document.getElementById('deeplink-btn-text').textContent = `Open Settings (${sub.deepLink})`;
+        }
+
+        function markAsFixed() {
+            showToast("Awesome! Fixxo AI successfully calibrated your device.");
+            switchTab('home');
+        }
+
+        function goToCheckout() {
+            switchTab('checkout');
+            renderHardwareTiers();
+        }
+
+        // Checkout & Tiers Logic
+        function renderHardwareTiers() {
+            const container = document.getElementById('hardware-tiers-container');
+            container.innerHTML = '';
+            const sub = PROBLEMS_DB[appState.selectedCategory].subProblems[appState.selectedSubProblem];
+            
+            sub.hardwareTiers.forEach((tier, index) => {
+                const isSelected = appState.selectedTierIndex === index;
+                const div = document.createElement('div');
+                div.className = `p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between space-y-4 ${isSelected ? 'bg-brand-600/20 border-brand-500 shadow-xl' : 'bg-dark-900 border-gray-700 hover:border-gray-500'}`;
+                div.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold px-2.5 py-1 rounded-full ${isSelected ? 'bg-brand-500 text-white' : 'bg-gray-800 text-gray-300'}">${tier.tag}</span>
+                            <span class="text-xs text-gray-400 font-semibold">${tier.warranty}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white">${tier.name}</h4>
+                    </div>
+                    <div class="flex items-baseline justify-between pt-2 border-t border-gray-800">
+                        <span class="text-2xl font-extrabold text-white">₹${tier.price.toLocaleString()}</span>
+                        <div class="w-6 h-6 rounded-full border flex items-center justify-center ${isSelected ? 'bg-brand-500 border-brand-400 text-white' : 'border-gray-600 text-transparent'}">
+                            <i class="fa-solid fa-check text-xs"></i>
+                        </div>
+                    </div>
+                `;
+                div.onclick = () => {
+                    appState.selectedTierIndex = index;
+                    renderHardwareTiers();
+                    updateCheckoutSummary();
+                };
+                container.appendChild(div);
+            });
+        }
+
+        function updateAddons() {
+            appState.addons.backupPhone = document.getElementById('addon-backup').checked;
+            appState.addons.temperedGlass = document.getElementById('addon-glass').checked;
+            updateCheckoutSummary();
+        }
+
+        function updateCheckoutSummary() {
+            const sub = PROBLEMS_DB[appState.selectedCategory].subProblems[appState.selectedSubProblem];
+            const tier = sub.hardwareTiers[appState.selectedTierIndex] || sub.hardwareTiers[0];
+            let total = tier.price;
+            if (appState.addons.backupPhone) total += 199;
+            if (appState.addons.temperedGlass) total += 149;
+            const el = document.getElementById('summary-total-price');
+            if (el) el.textContent = `₹${total.toLocaleString()}`;
+        }
+
+        function confirmOrder() {
+            showToast("Doorstep pickup booked successfully! Order #FX-8942 created.");
+            switchTab('tracker');
+        }
+
+        // Tracker Logic
+        function advanceTrackerStage() {
+            if (appState.trackerStage < 4) {
+                appState.trackerStage++;
+                updateTrackerUI();
+            }
+        }
+
+        function updateTrackerUI() {
+            const stage = appState.trackerStage;
+            for (let i = 1; i <= 4; i++) {
+                const card = document.getElementById(`step-card-${i}`);
+                if (i <= stage) {
+                    card.className = "bg-brand-900/40 border border-brand-500 rounded-2xl p-4 text-center transition-all";
+                    card.querySelector('div').className = "w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center mx-auto mb-2 font-bold text-sm";
+                    card.querySelector('span').className = "text-xs font-bold text-white block";
+                }
+            }
+
+            const statusTexts = {
+                1: "Stage 1: Rider Assigned & 12-Point OTP Check",
+                2: "Stage 2: QR Tamper Bag Sealed & In Transit to Hub",
+                3: "Stage 3: Live Hub Workbench Cam & Microscope Inspection",
+                4: "Stage 4: Repair Complete & Digital Passport Issued"
+            };
+            document.getElementById('tracker-status-text').textContent = statusTexts[stage];
+            document.getElementById('next-stage-btn-text').textContent = stage < 4 ? `Advance to Stage ${stage + 1}` : "Repair Completed";
+
+            if (stage === 3) {
+                document.getElementById('mid-repair-gate').classList.remove('hidden');
+            }
+        }
+
+        function resolveMidRepair(decision) {
+            appState.midRepairDecision = decision;
+            document.getElementById('mid-repair-gate').classList.add('hidden');
+            showToast(decision === 'approved' ? "Free gasket upgrade approved!" : "Skipped optional gasket upgrade.");
+        }
+
+        // Mirror-Cam Grader Modal
+        function openMirrorModal() {
+            document.getElementById('mirror-modal').classList.remove('hidden');
+            try {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        const video = document.getElementById('webcam-video');
+                        video.srcObject = stream;
+                        document.getElementById('mirror-status-overlay').textContent = "Webcam active: Live surface grading";
+                    })
+                    .catch(() => {
+                        document.getElementById('mirror-status-overlay').textContent = "Simulated Mirror Scanner Active";
+                    });
+            } catch (e) {}
+        }
+
+        function closeMirrorModal() {
+            document.getElementById('mirror-modal').classList.add('hidden');
+            try {
+                const video = document.getElementById('webcam-video');
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(t => t.stop());
+                }
+            } catch (e) {}
+        }
+
+        function completeMirrorScan() {
+            closeMirrorModal();
+            showToast("Mirror-Cam grade locked: Grade A (98% Pristine)");
+        }
+
+        // Settings Modal
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        // Toast Helper
+        function showToast(text) {
+            const toast = document.getElementById('toast-banner');
+            document.getElementById('toast-text').textContent = text;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
